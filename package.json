@@ -1,6 +1,6 @@
 {
   "name": "beast-codec",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A tiny, dependency-free beast voice encoder and decoder for JavaScript and TypeScript",
   "keywords": [
     "beast",
