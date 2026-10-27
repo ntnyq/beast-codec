@@ -126,9 +126,15 @@ pnpm release:check
 pnpm build
 ```
 
-## Compatibility references
+Run `pnpm bench` for Vitest timing and throughput benchmarks in
+`tests/codec.bench.ts`. They cover encoding and decoding 64 Ki and 1 Mi UTF-16 code
+units with default, emoji, and mixed-width alphabets. Fixture creation and output
+validation are outside the measured operations. Results depend on the Node.js
+version and machine; no timing thresholds are enforced.
 
-The encoding format and default alphabet order follow [SycAlright/beast_sdk](https://github.com/SycAlright/beast_sdk/blob/main/JavaScript/beast.js), while framing follows [sgdrg15rdg/beast_js](https://github.com/sgdrg15rdg/beast_js/blob/main/beast.js). This package provides an independent TypeScript implementation with strict input validation.
+Run `pnpm test:memory` to execute the large-input regression tests in a Vitest fork
+worker with a 128 MiB V8 old-space heap limit. This checks that the cases finish
+within that heap limit; it does not measure peak memory or limit total process RSS.
 
 ## License
 

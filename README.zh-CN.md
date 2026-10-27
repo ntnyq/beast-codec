@@ -126,9 +126,14 @@ pnpm release:check
 pnpm build
 ```
 
-## 兼容性参考
+运行 `pnpm bench`，通过 `tests/codec.bench.ts` 中的 Vitest 基准测试测量耗时和
+吞吐量。覆盖 64 Ki 和 1 Mi 个 UTF-16 码元的编码与解码，以及默认、emoji 和混合
+宽度字符表。输入准备和输出校验不计入测量；结果取决于 Node.js 版本和机器配置，
+不设置耗时阈值。
 
-编码格式与默认字符顺序参考 [SycAlright/beast_sdk](https://github.com/SycAlright/beast_sdk/blob/main/JavaScript/beast.js)，首尾标记参考 [sgdrg15rdg/beast_js](https://github.com/sgdrg15rdg/beast_js/blob/main/beast.js)。本包提供独立的 TypeScript 实现和严格的输入校验。
+运行 `pnpm test:memory`，在限制 V8 老生代堆为 128 MiB 的 Vitest fork worker 中
+执行大输入回归测试。该命令检查用例能否在此堆限制下完成，不测量内存峰值，也不
+限制进程的总 RSS。
 
 ## 许可证
 

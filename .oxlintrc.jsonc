@@ -92,7 +92,7 @@
       },
     },
     {
-      "files": ["*.{spec,test}.{js,ts,tsx}", "*.{spec,test}-d.{ts,tsx}"],
+      "files": ["*.{bench,spec,test}.{js,ts,tsx}", "*.{spec,test}-d.{ts,tsx}"],
       "plugins": ["vitest"],
       "rules": {
         "id-length": "off",

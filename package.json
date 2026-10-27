@@ -43,6 +43,7 @@
     "access": "public"
   },
   "scripts": {
+    "bench": "vitest bench --reporter=verbose",
     "build": "tsdown",
     "dev": "tsdown --watch",
     "format": "oxfmt",
@@ -54,6 +55,7 @@
     "release:check": "run-s format:check lint typecheck test",
     "release:version": "bumpp",
     "test": "vitest",
+    "test:memory": "vitest run tests/large-input.test.ts --pool=forks --execArgv=--max-old-space-size=128 --maxWorkers=1",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

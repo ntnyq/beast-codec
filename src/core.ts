@@ -2,6 +2,9 @@ import { isBoolean, isUndefined } from '@ntnyq/utils'
 import type { BeastOptions, EncodeOptions } from './types'
 import { assertString, resolveAlphabet } from './utils'
 
+// Bound temporary buffers and spread arguments independently of input size.
+const CHUNK_SIZE = 4096
+
 /**
  * Encodes each UTF-16 code unit as eight beast symbols.
  *
@@ -18,7 +21,10 @@ export function encode(input: string, options: EncodeOptions = {}): string {
     throw new TypeError('The framed option must be a boolean')
   }
 
-  let encoded = ''
+  const pairs = alphabet.flatMap(high => alphabet.map(low => high + low))
+  const chunks: string[] = []
+  const buffer: string[] = []
+  let bufferIndex = 0
   let offset = 0
 
   // Iterate code units so surrogate pairs and lone surrogates remain lossless.
@@ -28,11 +34,23 @@ export function encode(input: string, options: EncodeOptions = {}): string {
 
     for (let divisor = 4096; divisor >= 1; divisor /= 16) {
       const digit = ((Math.floor(codeUnit / divisor) % 16) + offset) % 16
-      encoded += alphabet[Math.floor(digit / 4)]
-      encoded += alphabet[digit % 4]
+      // oxlint-disable-next-line typescript/no-non-null-assertion -- Modulo 16 indexes the sixteen alphabet pairs.
+      buffer[bufferIndex++] = pairs[digit]!
       offset = (offset + 1) % 16
+
+      if (bufferIndex === CHUNK_SIZE) {
+        chunks.push(buffer.join(''))
+        bufferIndex = 0
+      }
     }
   }
+
+  if (bufferIndex > 0) {
+    buffer.length = bufferIndex
+    chunks.push(buffer.join(''))
+  }
+
+  const encoded = chunks.join('')
 
   if (options.framed) {
     const [zero, one, two, three] = alphabet
@@ -56,35 +74,44 @@ export function decode(input: string, options: BeastOptions = {}): string {
 
   const alphabet = resolveAlphabet(options.alphabet)
 
-  let symbols = [...input]
+  let symbolCount = 0
 
-  if (symbols.length % 8 === 4) {
+  // Count code points without retaining an array, including mixed-width alphabets.
+  const iterator = input[Symbol.iterator]()
+
+  while (!iterator.next().done) {
+    symbolCount++
+  }
+
+  let payload = input
+
+  if (symbolCount % 8 === 4) {
     const [zero, one, two, three] = alphabet
+    const prefix = `${three}${one}${zero}`
 
-    if (
-      symbols[0] !== three ||
-      symbols[1] !== one ||
-      symbols[2] !== zero ||
-      symbols.at(-1) !== two
-    ) {
+    if (!input.startsWith(prefix) || !input.endsWith(two)) {
       throw new SyntaxError('Invalid beast framing')
     }
 
-    symbols = symbols.slice(3, -1)
+    payload = input.slice(prefix.length, -two.length)
+    symbolCount -= 4
   }
 
-  if (symbols.length % 8 !== 0) {
+  if (symbolCount % 8 !== 0) {
     throw new SyntaxError(
       'A beast payload must contain a multiple of 8 symbols',
     )
   }
 
-  let decoded = ''
+  const chunks: string[] = []
+  const buffer: number[] = []
+
+  let bufferIndex = 0
   let pair = 0
   let codeUnit = 0
   let index = 0
 
-  for (const symbol of symbols) {
+  for (const symbol of payload) {
     const digit = alphabet.indexOf(symbol)
 
     if (digit === -1) {
@@ -100,12 +127,22 @@ export function decode(input: string, options: BeastOptions = {}): string {
     }
 
     if (index % 8 === 7) {
-      decoded += String.fromCodePoint(codeUnit)
+      buffer[bufferIndex++] = codeUnit
       codeUnit = 0
+
+      if (bufferIndex === CHUNK_SIZE) {
+        chunks.push(String.fromCodePoint(...buffer))
+        bufferIndex = 0
+      }
     }
 
     index++
   }
 
-  return decoded
+  if (bufferIndex > 0) {
+    buffer.length = bufferIndex
+    chunks.push(String.fromCodePoint(...buffer))
+  }
+
+  return chunks.join('')
 }
